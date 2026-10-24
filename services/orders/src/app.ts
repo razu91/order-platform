@@ -2,7 +2,18 @@ import express from "express";
 import { Pool } from "pg";
 import {randomUUID} from "node:crypto";
 
-export function createApp(db: Pool) {
+type OrderCreatedPublisher = (order: {
+    id: string;
+    customer_id: string;
+    status: string;
+    total_amount: string | number;
+    created_at: string | Date;
+    updated_at: string | Date;
+}) => Promise<void>;
+export function createApp(
+    db: Pool,
+    publishOrderCreated?: OrderCreatedPublisher
+) {
 
     const app = express();
 
@@ -51,9 +62,15 @@ export function createApp(db: Pool) {
                 [id, customerId, totalAmount]
             );
 
+            const order = result.rows[0];
+
+            if (publishOrderCreated) {
+                await publishOrderCreated(order);
+            }
+
             return res.status(201).json({
                 message: "Order created successfully",
-                order: result.rows[0],
+                order,
             })
         } catch (error) {
             console.error("Failed to create order:", error);
