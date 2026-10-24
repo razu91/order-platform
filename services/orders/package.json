@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "tsx --test src/app.test.ts",
+    "integration-test": "tsx --test src/app.integration.test.ts",
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js"
