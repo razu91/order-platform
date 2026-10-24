@@ -1,0 +1,60 @@
+
+name: Orders Service CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  orders-ci:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: orders_test_db
+          POSTGRES_USER: orders_user
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U orders_user -d orders_test_db"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    defaults:
+      run:
+        working-directory: services/orders
+
+    env:
+      TEST_DATABASE_URL: postgresql://orders_user:test_password@localhost:5433/orders_test_db
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: services/orders/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build TypeScript
+        run: npm run build
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Create database schema
+        run: psql "$TEST_DATABASE_URL" -f sql/001_create_orders.sql
+
+      - name: Run integration tests
+        run: npm run integration-test
